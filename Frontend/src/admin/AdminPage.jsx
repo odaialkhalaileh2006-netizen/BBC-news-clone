@@ -163,7 +163,7 @@ function AdminPage() {
       >
         Add writer
       </Link>
-      )};
+      )}
           </div>
       </div>
       <div className="grid grid-cols-12">
