@@ -1,0 +1,34 @@
+{
+  "name": "bbc-homepage-clone",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
+  },
+  "dependencies": {
+    "@tiptap/pm": "^3.31.3",
+    "@tiptap/react": "^3.31.3",
+    "@tiptap/starter-kit": "^3.31.3",
+    "lucide-react": "^0.400.0",
+    "react": "17.0.2",
+    "react-dom": "17.0.2",
+    "react-router-dom": "^6.30.4",
+    "swiper": "^11.1.5"
+  },
+  "devDependencies": {
+    "@storybook/addon-a11y": "^10.5.8",
+    "@storybook/addon-docs": "^10.5.8",
+    "@storybook/react-vite": "^10.5.8",
+    "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.39",
+    "storybook": "^10.5.8",
+    "tailwindcss": "^3.4.4",
+    "vite": "^5.3.1"
+  }
+}
