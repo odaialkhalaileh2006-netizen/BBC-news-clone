@@ -49,8 +49,8 @@ A full-stack clone of the BBC News homepage with a login-protected admin panel w
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/YOUR_REPO.git
-cd YOUR_REPO
+  git clone https://github.com/odaialkhalaileh2006-netizen/BBC-news-clone.git
+  cd BBC-news-clone
 ```
 
 ### 2. Set up the database
