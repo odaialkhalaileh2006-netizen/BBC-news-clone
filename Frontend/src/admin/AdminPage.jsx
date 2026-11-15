@@ -1,27 +1,28 @@
 import { useState, useEffect } from "react";
-import {Link} from "react-router-dom";
 import { fetchArticles, createArticle, updateArticle, deleteArticle } from "../api/articlesApi";
 import { logout, verifyToken } from "../api/authApi";
 import Login from "./Login";
-import RichTextEditor from "./RichTextEditor";
-
-const EMPTY_FORM = {
-  title: "",
-  summary: "",
-  imageUrl: "",
-  content: "",
-};
+import AdminLayout from "./components/AdminLayout";
+import ArticleList from "./components/ArticleList";
+import ArticleForm from "./components/ArticleForm";
+import DeleteModal from "./components/DeleteModal";
+import Toast from "./components/Toast";
+import { EMPTY_FORM } from "./components/constants";
 
 function AdminPage() {
   const [articles, setArticles] = useState([]);
-  const [error, setError] = useState(null);
-  const [show, setShow] = useState(false);
+  const [loadingArticles, setLoadingArticles] = useState(true);
   const [form, setForm] = useState(EMPTY_FORM);
   const [editingId, setEditingId] = useState(null);
   const [imageFile, setImageFile] = useState(null);
   const [loggedIn, setLoggedIn] = useState(false);
   const [checking, setChecking] = useState(true);
   const [role, setRole] = useState(null);
+  const [view, setView] = useState("list");
+  const [saving, setSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [toast, setToast] = useState(null);
 
   useEffect(() => {
     verifyToken().then(({ valid, role }) => {
@@ -36,105 +37,120 @@ function AdminPage() {
     });
   }, []);
 
-  function loadArticles() {
-    fetchArticles().then((data) => {
-      setArticles(data);
-    }).catch((err) => {
-      if (err.status === 401 || err.status === 403) {
-        logout();
-        setLoggedIn(false);
-      } else {
-        setError(err.message);
-      }
-    });
+  useEffect(() => {
+    if (loggedIn) loadArticles();
+  }, [loggedIn]);
+
+  function showToast(type, message) {
+    setToast({ type, message });
   }
 
-  useEffect(loadArticles, []);
+  function handleApiError(err) {
+    if (err.status === 401 || err.status === 403) {
+      logout();
+      setLoggedIn(false);
+    } else {
+      showToast("error", err.message || "Something went wrong. Please try again.");
+    }
+  }
 
-  function displayPosts() {
-    setShow(!show);
+  function loadArticles() {
+    setLoadingArticles(true);
+    fetchArticles()
+      .then((data) => setArticles(data))
+      .catch(handleApiError)
+      .finally(() => setLoadingArticles(false));
   }
 
   function handleChange(e) {
-    let name = e.target.name;
-    let value = e.target.value;
-    let newForm = { ...form };
-    newForm[name] = value;
-    setForm(newForm);
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
   }
 
-  async function handleDelete(id) {
-    var confirmed = window.confirm("Delete this article?");
-    if (!confirmed) {
-      return;
-    }
-    setError(null);
-    try {
-      await deleteArticle(id);
-      loadArticles();
-    } catch (err) {
-      if (err.status === 401 || err.status === 403) {
-        logout();
-        setLoggedIn(false);
-      } else {
-        setError(err.message);
-      }
-    }
+  function handleContentChange(html) {
+    setForm((prev) => ({ ...prev, content: html }));
   }
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-    setError(null);
-    try {
-      const formData = new FormData();
-      formData.append('title', form.title);
-      formData.append('summary', form.summary);
-      formData.append('content', form.content);
-      if (imageFile) {
-        formData.append('image', imageFile);
-      }
-      if (editingId) {
-        await updateArticle(editingId, formData);
-      } else {
-        await createArticle(formData);
-      }
-      cancelEdit();
-      loadArticles();
-    } catch (err) {
-      if (err.status === 401 || err.status === 403) {
-        logout();
-        setLoggedIn(false);
-      } else {
-        setError(err.message);
-      }
-    }
+  function openNew() {
+    setEditingId(null);
+    setForm(EMPTY_FORM);
+    setImageFile(null);
+    setView("editor");
   }
 
   function startEdit(article) {
-  setEditingId(article.id);
-  setForm({
-    title: article.title || "",
-    summary: article.summary || "",
-    imageUrl: article.imageUrl || "",
-    content: article.content || "",
-  });
-  setImageFile(null);
-}
+    setEditingId(article.id);
+    setForm({
+      title: article.title || "",
+      summary: article.summary || "",
+      imageUrl: article.imageUrl || "",
+      content: article.content || "",
+    });
+    setImageFile(null);
+    setView("editor");
+  }
 
   function cancelEdit() {
     setEditingId(null);
     setForm(EMPTY_FORM);
     setImageFile(null);
+    setView("list");
   }
 
-  function handleContentChange(html) {
-  let newForm = { ...form };
-  newForm.content = html;
-  setForm(newForm);
-}
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const formData = new FormData();
+      formData.append("title", form.title);
+      formData.append("summary", form.summary);
+      formData.append("content", form.content);
+      if (imageFile) {
+        formData.append("image", imageFile);
+      }
+      if (editingId) {
+        await updateArticle(editingId, formData);
+        showToast("success", "Changes saved.");
+      } else {
+        await createArticle(formData);
+        showToast("success", "Article added.");
+      }
+      cancelEdit();
+      loadArticles();
+    } catch (err) {
+      handleApiError(err);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await deleteArticle(deleteTarget.id);
+      showToast("success", "Article deleted.");
+      setDeleteTarget(null);
+      loadArticles();
+    } catch (err) {
+      setDeleteTarget(null);
+      handleApiError(err);
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  async function handleLogout() {
+    await logout();
+    setLoggedIn(false);
+  }
 
   if (checking) {
-    return <p className="p-8">Checking login...</p>;
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 text-sm text-gray-500">
+        Checking login...
+      </div>
+    );
   }
 
   if (!loggedIn) {
@@ -142,164 +158,40 @@ function AdminPage() {
   }
 
   return (
-    <div className="flex flex-col p-8">
-      <div className=" gap-2 pb-8">
-        <a href="/" className="flex shrink-0 gap-2 " aria-label="BBC Home">
-          {["B", "B", "C"].map((letter, i) => (
-            <span
-              key={i}
-              className="w-8 h-8 text-2xl bg-black text-white flex items-center justify-center font-black"
-            >
-              {letter}
-            </span>
-          ))}
-        </a>
-        <h1 className="text-2xl font-bold">Admin Page</h1>
-        <div className="pt-6">
-        {role === 'admin' && (
-      <Link
-        to="/admin/writers"
-        className="rounded bg-gray-900 px-4 py-3 text-sm font-semibold text-white hover:bg-gray-700"
-      >
-        Add writer
-      </Link>
+    <AdminLayout role={role} onShowList={() => setView("list")} onLogout={handleLogout}>
+      {view === "list" && (
+        <ArticleList
+          articles={articles}
+          loading={loadingArticles}
+          onNew={openNew}
+          onEdit={startEdit}
+          onDelete={setDeleteTarget}
+        />
       )}
-          </div>
-      </div>
-      <div className="grid grid-cols-12">
-        <div className="bg-blue-950 col-span-2 h-screen">
-          <div className="flex flex-col items-center justify-center gap-4 font-bold text-m pt-6">
-            <button
-              className="   hover:text-white transition"
-              onClick={displayPosts}
-            >
-              posts
-            </button>
-            <button
-              onClick={async () => {
-                await logout();
-                setLoggedIn(false);
-              }}
-              className=" hover:text-white transition"
-            >
-              Log out
-            </button>
-          </div>
-        </div>
-        <div className=" pl-16 col-span-8 h-screen">
-          {show && (
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-              {error && <p className="text-red-600 text-sm">{error}</p>}
-              <h1 className="text-xl font-bold">
-                Posts will be displayed here:
-              </h1>
-              <input
-                name="title"
-                value={form.title}
-                onChange={handleChange}
-                placeholder="Title"
-                required
-                className="w-full rounded border border-gray-300 p-2 text-sm"
-              />
-              <textarea
-                name="summary"
-                value={form.summary}
-                onChange={handleChange}
-                placeholder="Summary"
-                rows={2}
-                className="w-full rounded border border-gray-300 p-2 text-sm"
-              />
-              <RichTextEditor
-              key={editingId || 'new'}
-              value={form.content}
-              onChange={handleContentChange}
-            />
-              <div className="flex items-center gap-3">
-                <label
-                  htmlFor="imageFile"
-                  className="cursor-pointer rounded border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100"
-                >
-                  Choose image
-                </label>
-                <input
-                  id="imageFile"
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setImageFile(e.target.files[0])}
-                  className="hidden"
-                />
-                <span className="text-sm text-gray-500 truncate">
-                  {imageFile ? imageFile.name : "No file chosen"}
-                </span>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  type="submit"
-                  className="rounded bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-700"
-                >
-                  {editingId ? "Save changes" : "Add article"}
-                </button>
-                {editingId && (
-                  <button
-                    type="button"
-                    onClick={cancelEdit}
-                    className="rounded border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
-                  >
-                    Cancel
-                  </button>
-                )}
-              </div>
-              <h2 className="mt-8 font-semibold text-gray-800">
-                Existing articles
-              </h2>
-              <ul className="mt-3 divide-y divide-gray-200 rounded border border-gray-200">
-                {articles.map((article) => (
-                  <li
-                    key={article.id}
-                    className="flex items-center justify-between gap-4 p-3"
-                  >
-                    <img
-                      src={`http://localhost:5000/uploads/${article.imageUrl}`}
-                      alt={article.title}
-                      className="w-12 h-12 object-cover rounded"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium text-gray-900">
-                        {article.title}
-                      </p>
-                      <p className="truncate text-xs text-gray-500">
-                        {article.summary}
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => startEdit(article)}
-                        className="rounded border border-gray-300 px-3 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-50"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(article.id)}
-                        className="rounded border border-red-300 px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </li>
-                ))}
-                {articles.length === 0 && (
-                  <li className="p-3 text-sm text-gray-500">
-                    No articles yet.
-                  </li>
-                )}
-              </ul>
-            </form>
-          )}
-        </div>
-      </div>
-    </div>
+
+      {view === "editor" && (
+        <ArticleForm
+          form={form}
+          editingId={editingId}
+          saving={saving}
+          imageFile={imageFile}
+          onChange={handleChange}
+          onContentChange={handleContentChange}
+          onImageChange={setImageFile}
+          onSubmit={handleSubmit}
+          onCancel={cancelEdit}
+        />
+      )}
+
+      <DeleteModal
+        article={deleteTarget}
+        deleting={deleting}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+      />
+      <Toast toast={toast} onClose={() => setToast(null)} />
+    </AdminLayout>
   );
 }
+
 export default AdminPage;
