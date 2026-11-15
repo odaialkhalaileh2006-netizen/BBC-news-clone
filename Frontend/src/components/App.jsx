@@ -14,26 +14,29 @@ import LatestSportsAudio from "./Home/LatestSportsAudio";
 import EntertainmentNews from "./Home/EntertainmentNews";
 import ExploreSection from "./Home/ExploreSection";
 import DiscoverMoreFromBbc from "./Home/DiscoverMoreFromBbc";
+import { ReaderAuthProvider } from "../context/ReaderAuthContext";
 function App() {
-  return (
-    <div >
-      <Header />
-      <NewsColumns />
-      <FromBbc />
-      <WorldCupSection />
-      <EditorsPicks />
-      <BestAudio />
-      <MoreNews />
-      <Travel />
-      <KaatyKay />
-      <Health />
-      <WorldNews />
-      <LatestSportsAudio />
-      <EntertainmentNews />
-      <ExploreSection />
-      <DiscoverMoreFromBbc />
-      <Footer />
-    </div>
+    return (
+    <ReaderAuthProvider>
+      <div>
+        <Header />
+        <NewsColumns />
+        <FromBbc />
+        <WorldCupSection />
+        <EditorsPicks />
+        <BestAudio />
+        <MoreNews />
+        <Travel />
+        <KaatyKay />
+        <Health />
+        <WorldNews />
+        <LatestSportsAudio />
+        <EntertainmentNews />
+        <ExploreSection />
+        <DiscoverMoreFromBbc />
+        <Footer />
+      </div>
+    </ReaderAuthProvider>
   );
 }
 

@@ -12,3 +12,11 @@ CREATE TABLE IF NOT EXISTS users (
   password TEXT NOT NULL,
   role TEXT NOT NULL DEFAULT 'writer'
 );
+
+CREATE TABLE IF NOT EXISTS readers (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  email TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

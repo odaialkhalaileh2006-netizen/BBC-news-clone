@@ -7,6 +7,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { unlink } from 'fs/promises';
 import cookieParser from 'cookie-parser';
+import readersRouter from './routes/readers.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -35,6 +36,7 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage });
+app.use('/api/readers', readersRouter(pool));
 
 const content = {
   "HealthSec": {
@@ -1363,6 +1365,9 @@ function authenticateToken(req, res, next) {
   jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
     if (err) {
       return res.status(403).json({ error: 'Invalid token' });
+    }
+    if (user.role !== 'admin' && user.role !== 'writer') {
+      return res.status(403).json({ error: 'Staff only' });
     }
     req.user = user;
     next();

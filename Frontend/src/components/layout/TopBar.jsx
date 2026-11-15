@@ -1,6 +1,9 @@
 import React, { useState } from "react";
 import { useContent } from "../../context/ContentContext";
 import SearchBar from "../Ui/SearchBar";
+import { useReader } from "../../context/ReaderAuthContext";
+import AuthModal from "../auth/AuthModal";
+import ReaderMenu from "../auth/ReaderMenu";
 
 function ChevronDown() {
   return (
@@ -39,6 +42,8 @@ function CloseIcon() {
 function TopBar() {
   const { navItems } = useContent();
   const [menuOpen, setMenuOpen] = useState(false);
+  const { reader, loading } = useReader();
+  const [authMode, setAuthMode] = useState(null);
 
   return (
     <div className="relative">
@@ -87,7 +92,7 @@ function TopBar() {
 
         <a
           href="/"
-          className="flex shrink-0 gap-2 pl-28"
+          className="flex shrink-0 gap-2"
           aria-label="BBC Home"
         >
           {["B", "B", "C"].map((letter, i) => (
@@ -102,16 +107,26 @@ function TopBar() {
 
 
        
-        <div className="flex items-center gap-2 font-semibold text-sm">
+           <div className="flex items-center gap-2 font-semibold text-sm">
+          {loading ? null : reader ? (
+            <ReaderMenu />
+          ) : (
+            <>
+              <button
+                onClick={() => setAuthMode("register")}
+                className="bg-black text-white px-4 py-2 hover:bg-gray-600 transition"
+              >
+                Register
+              </button>
 
-          <button className="bg-black text-white px-4 py-2 hover:bg-gray-600 transition">
-            Register
-          </button>
-
-          <button className="bg-white text-black px-4 py-2 hover:bg-gray-600 hover:text-white transition">
-            Sign In
-          </button>
-
+              <button
+                onClick={() => setAuthMode("signin")}
+                className="bg-white text-black px-4 py-2 hover:bg-gray-600 hover:text-white transition"
+              >
+                Sign In
+              </button>
+            </>
+          )}
         </div>
 
       </div>
@@ -188,6 +203,11 @@ function TopBar() {
         </div>
 
       )}
+            <AuthModal
+        mode={authMode}
+        onModeChange={setAuthMode}
+        onClose={() => setAuthMode(null)}
+      />
 
     </div>
   );
